@@ -88,6 +88,13 @@ class GatewayService:
             command_response = self.command_generator.generate_command(command_request)
             
             if not command_response.success:
+                # Track failed command generation
+                try:
+                    from gateway.api.main import COMMAND_GENERATION_COUNT
+                    COMMAND_GENERATION_COUNT.labels(status='failed').inc()
+                except (ImportError, NameError):
+                    pass  # Metrics not available
+                    
                 logger.error(f"Command generation failed: {command_response.error_message}")
                 return self._create_error_response(
                     request,
@@ -95,6 +102,13 @@ class GatewayService:
                     "LLM_ERROR",
                     command_response.error_message
                 )
+            
+            # Track successful command generation
+            try:
+                from gateway.api.main import COMMAND_GENERATION_COUNT
+                COMMAND_GENERATION_COUNT.labels(status='success').inc()
+            except (ImportError, NameError):
+                pass  # Metrics not available
             
             generated_command = command_response.command
             logger.info(
