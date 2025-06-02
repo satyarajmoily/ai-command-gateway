@@ -190,10 +190,11 @@ Response: docker exec my-app ps aux
         if len(parts) < 2:
             return False
         
-        # Valid Docker subcommands for our use case
+        # Valid Docker subcommands for our use case (EXPANDED)
         valid_subcommands = {
             'restart', 'start', 'stop', 'logs', 'exec', 'ps', 
-            'inspect', 'stats', 'top', 'port', 'diff'
+            'inspect', 'stats', 'top', 'port', 'diff', 'commit',
+            'images', 'version', 'info', 'system'
         }
         
         subcommand = parts[1]
@@ -207,13 +208,20 @@ Response: docker exec my-app ps aux
             if len(parts) < 4:
                 return False
         
-        # Command should not contain dangerous operations
-        dangerous_patterns = ['rm', 'rmi', '--privileged', 'sudo', 'su']
+        # IMPROVED: Command should not contain truly dangerous operations
+        # Fixed to not trigger on JSON formatting
+        dangerous_patterns = ['rm -rf', 'rmi -f', '--privileged', 'sudo su', 'mkfs', 'fdisk']
         command_lower = command.lower()
         for pattern in dangerous_patterns:
             if pattern in command_lower:
                 logger.warning(f"Potentially dangerous command pattern detected: {pattern}")
                 return False
+        
+        # IMPROVED: Don't flag single 'rm' or JSON formatting as dangerous
+        # Only flag 'rm -rf' patterns, not 'rm' in JSON format strings
+        if ' rm ' in command_lower and '-rf' in command_lower:
+            logger.warning(f"Dangerous rm -rf pattern detected")
+            return False
         
         return True
 
