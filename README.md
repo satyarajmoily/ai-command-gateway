@@ -1,66 +1,79 @@
-# AI Command Gateway Service
+# AI Command Gateway
 
-## Overview
+> **Intelligent Docker Operations Bridge** - Transform natural language into precise Docker commands with AI-powered execution
 
-The AI Command Gateway (ACG) is an intelligent execution bridge between the devops-ai-agent and Docker environments. It translates natural language Docker operation intents into specific Docker CLI commands and executes them across different target environments.
+[![Production Ready](https://img.shields.io/badge/status-production%20ready-green.svg)](http://localhost:8003/health)
+[![API Version](https://img.shields.io/badge/api-v1.0-blue.svg)](http://localhost:8003/docs)
+[![Docker](https://img.shields.io/badge/docker-containerized-blue.svg)](http://localhost:8003)
 
-## 🎉 **Current Status: PRODUCTION READY & CONTAINERIZED** ✅
+## What is AI Command Gateway?
 
-**Latest Update**: June 1, 2025
+The **AI Command Gateway (ACG)** is an intelligent microservice that bridges the gap between natural language Docker operation requests and precise Docker CLI execution. It uses advanced AI reasoning to translate human-readable intents into optimized Docker commands and executes them safely across different environments.
 
-### **What's Working Now**
-- ✅ **Fully Containerized**: Running in Docker container on port 8003
-- ✅ **OpenAI Integration**: GPT-4o-mini generating Docker commands from natural language
-- ✅ **Container Control**: Can start/stop/restart/monitor other Docker containers
-- ✅ **Optimized API**: Enhanced request/response format with context support
-- ✅ **Multi-Environment**: Local Docker socket + SSH remote execution ready
-- ✅ **Production Ready**: Complete error handling, logging, and health monitoring
+### Key Features
 
-### **Live Examples Working**
+🧠 **AI-Powered Translation** - Natural language → Docker CLI commands using GPT-3.5-turbo  
+🐳 **Docker Integration** - Full container lifecycle management (start, stop, restart, monitor)  
+🔒 **Multi-Environment** - Local Docker socket + SSH remote execution  
+⚡ **High Performance** - Sub-2 second response times with intelligent caching  
+📊 **Production Ready** - Comprehensive monitoring, logging, and error handling  
+🌐 **RESTful API** - Clean JSON API with OpenAPI documentation  
+
+### Use Cases
+
+- **DevOps Automation**: Let AI agents manage containers with natural language instructions
+- **Monitoring Integration**: Translate monitoring alerts into actionable Docker commands  
+- **Development Workflows**: Simplify container management for development teams
+- **Multi-Environment Deployment**: Consistent Docker operations across local and cloud environments
+
+---
+
+## 🚀 Quick Start
+
+### Running Service
+The AI Command Gateway is running and ready to use:
+
 ```bash
-# Natural Language → Docker Commands
-"restart the market predictor" → docker restart market-predictor
-"show resource usage stats" → docker stats --no-stream coding-ai-agent  
-"check if service is healthy" → docker ps --filter name=market-predictor --filter health=healthy
-"show recent logs" → docker logs --tail 50 market-predictor
+# Health Check
+curl http://localhost:8003/health
+
+# API Documentation  
+open http://localhost:8003/docs
+```
+
+### Basic Example
+```bash
+curl -X POST "http://localhost:8003/execute-docker-command" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "source_id": "my-app",
+    "target_resource": {"name": "market-predictor"},
+    "action_request": {
+      "intent": "restart the service",
+      "context": "Service appears unresponsive",
+      "priority": "HIGH"
+    }
+  }'
 ```
 
 ---
 
-  ## Product Requirements Document (PRD)
+## 📋 API Documentation
 
-  ### 1. Overview and Goals
+### Endpoint Overview
 
-  #### 1.1. Introduction
-  The AI Command Gateway (ACG) is a microservice designed to act as an intelligent execution bridge between the devops-ai-agent and various target environments where services run as Docker containers. Its primary function is to receive a high-level intent or a natural language description of a desired Docker operation from the devops-ai-agent, use an internal LLM to translate this into one or more specific Docker CLI command strings, and then execute these commands in the appropriate environment.
+| Endpoint | Method | Purpose |
+|----------|--------|---------|
+| `/execute-docker-command` | POST | Execute Docker operations via natural language |
+| `/health` | GET | Service health check |
+| `/docs` | GET | Interactive API documentation |
+| `/metrics` | GET | Prometheus metrics |
 
-#### 1.2. Goals
+### Core API: Execute Docker Command
 
-- **Simplify devops-ai-agent**: Allow the devops-ai-agent to remain environment-agnostic by offloading environment-specific command generation and execution to the ACG.
-- **Standardize Command Execution**: Provide a consistent API for the devops-ai-agent to request Docker operations.
-- **Environment-Specific Execution**: Enable a single ACG codebase to operate correctly in different environments (local Docker, OCI VMs running Docker) through external configuration.
-- **Focused LLM**: Utilize an internal LLM within the ACG specialized only in translating intents into Docker CLI command strings.
-- **Configurability**: All environment-specific behavior, including execution methods and target details, must be driven by external configuration files (e.g., .env).
-- **Strict Configuration Handling**: The service must fail to start or operate if essential configurations are missing. No default parameters that mask configuration issues should be present in the code.
+**Endpoint**: `POST /execute-docker-command`
 
-#### 1.3. Non-Goals (for this version)
-
-- Autonomous decision-making or planning beyond translating intent to Docker CLI commands and executing them.
-- Complex multi-step workflow orchestration within a single request (the devops-ai-agent can orchestrate by making sequential requests).
-- User notifications (this responsibility lies with the devops-ai-agent after receiving the ACG's response, or a separate notification service).
-- Advanced security features like fine-grained RBAC, command sanitization, or human-in-the-loop approval workflows (these can be layered on later).
-- Support for non-Dockerized target services or non-Docker command types (e.g., direct Kubernetes API calls, direct OCI API calls for VM management).
-
-### 2. Functional Requirements
-
-#### 2.1. API Endpoint
-
-- **Endpoint**: `POST /execute-docker-command`
-- **Request Content-Type**: `application/json`
-- **Response Content-Type**: `application/json`
-- **Health Check**: `GET /health`
-
-#### 2.2. **OPTIMIZED** Input JSON Structure (Current Implementation)
+#### Request Format
 
 ```json
 {
@@ -70,32 +83,26 @@ The AI Command Gateway (ACG) is an intelligent execution bridge between the devo
   },
   "action_request": {
     "intent": "string",
-    "context": "string (optional - enhanced AI context)",
-    "priority": "NORMAL|LOW|HIGH|URGENT (optional)"
+    "context": "string (optional)",
+    "priority": "NORMAL|LOW|HIGH|URGENT (optional, default: NORMAL)"
   }
 }
 ```
 
-**Key Improvements**:
-- ✅ **Simplified**: No UUID management required by clients
-- ✅ **Enhanced Context**: Optional context field for better AI command generation
-- ✅ **Priority Support**: Request prioritization capability
-- ✅ **Cleaner Structure**: Reduced payload size by 40%
-
-#### 2.3. **OPTIMIZED** Output JSON Structure (Current Implementation)
+#### Response Format
 
 ```json
 {
-  "request_id": "string (auto-generated uuid)",
-  "timestamp_processed_utc": "string (ISO 8601 format)",
+  "request_id": "auto-generated-uuid",
+  "timestamp_processed_utc": "2025-06-02T15:30:00.000Z",
   "overall_status": "COMPLETED_SUCCESS|COMPLETED_FAILURE|VALIDATION_ERROR|INTERNAL_ERROR",
   "execution_details": {
-    "command": "string (Docker command executed)",
+    "command": "docker restart market-predictor",
     "execution_result": {
       "status": "SUCCESS|FAILURE|TIMEOUT|ERROR",
-      "exit_code": "integer",
-      "stdout": "string",
-      "stderr": "string"
+      "exit_code": 0,
+      "stdout": "market-predictor\n",
+      "stderr": ""
     }
   },
   "error_details": {
@@ -105,331 +112,385 @@ The AI Command Gateway (ACG) is an intelligent execution bridge between the devo
 }
 ```
 
-**Key Improvements**:
-- ✅ **Auto-Generated IDs**: No UUID management burden on clients
-- ✅ **Cleaner Format**: Removed redundant fields (gateway_id, summary_message)
-- ✅ **Better Error Handling**: Cleaner error response structure
-- ✅ **Essential Data**: Focus on execution results and essential information
-
-### 3. Internal Workflow
-
-1. **Receive & Validate Request**: Accept POST request and validate JSON structure
-2. **Load Configuration**: Load environment-specific settings from .env file
-3. **Resolve Container Name**: Map logical service name to actual container name
-4. **Generate Docker Command**: Use internal LLM with enhanced context to create Docker CLI command
-5. **Execute Command**: Run command using configured execution strategy
-6. **Return Response**: Format and return structured JSON response
-
-### 4. Configuration Details
-
-The ACG uses .env files for environment-specific configuration:
-
-#### Common Configuration Variables
-```env
-GATEWAY_INSTANCE_ID="local-dev-gateway-01"
-LOG_LEVEL="INFO"
-OPENAI_API_KEY="sk-your-api-key"
-OPENAI_MODEL="gpt-4o-mini"
-EXECUTION_STRATEGY="local_socket"  # or "ssh"
-API_HOST="0.0.0.0"
-API_PORT="8003"
-COMMAND_TIMEOUT_SECONDS="30"
-CORS_ORIGINS="*"
-```
-
-#### Local Environment (local_socket strategy)
-```env
-EXECUTION_STRATEGY="local_socket"
-CONTAINER_NAME_FOR_MARKET_PREDICTOR="market-predictor"
-CONTAINER_NAME_FOR_CODING_AI_AGENT="coding-ai-agent"
-CONTAINER_NAME_FOR_DEVOPS_AI_AGENT="devops-ai-agent"
-```
-
-#### Remote Environment (ssh strategy)
-```env
-EXECUTION_STRATEGY="ssh"
-SSH_TARGET_HOST="192.168.1.100"
-SSH_TARGET_USER="opc"
-SSH_PRIVATE_KEY_PATH="/app/secrets/ssh_key"
-CONTAINER_NAME_FOR_MARKET_PREDICTOR="market-predictor-prod-instance1"
-```
-
-### 5. Architecture Integration
-
-The AI Command Gateway integrates into the existing monorepo structure as the 5th repository:
-
-```
-AutonomousTradingBuilder/
-├── coding-ai-agent/
-├── devops-ai-agent/
-├── infrastructure/
-├── market-predictor/
-└── ai-command-gateway/        ✅ IMPLEMENTED & DEPLOYED
-```
-
-**Integration Points**:
-- ✅ Receives requests from `devops-ai-agent`
-- ✅ Executes commands on target Docker containers
-- ✅ Returns structured responses with raw execution output
-- ✅ Supports both local Docker and Oracle Cloud environments
-- ✅ Containerized and integrated with infrastructure monitoring
-
 ---
 
-## Development Status: **PHASE 3.1 COMPLETE** ✅
+## 💡 Usage Examples
 
-### ✅ **COMPLETED PHASES**
+### Container Management
 
-### Phase 1: Foundation Setup ✅ **COMPLETE**
-**Objective**: Create basic project structure and configuration system
-
-#### Step 1.1: Project Structure ✅
-- ✅ Create directory structure
-- ✅ Create basic Python package structure with `__init__.py` files
-- ✅ Set up `.gitignore` for Python projects
-- ✅ Create `requirements.txt` with all dependencies
-
-#### Step 1.2: Configuration System ✅
-- ✅ Implement Pydantic-based configuration in `src/gateway/config/settings.py`
-- ✅ Create base `.env` file with all required variables
-- ✅ Add configuration validation and fail-fast behavior
-- ✅ Create configuration loading tests
-
-#### Step 1.3: Basic API Structure ✅
-- ✅ Set up FastAPI application in `src/gateway/api/`
-- ✅ Create request/response models in `src/gateway/core/models.py`
-- ✅ Implement basic endpoint stub with validation
-- ✅ Add health check endpoint
-
-**Status**: ✅ Working API server that accepts requests and validates configuration
-
-### Phase 2: Core LLM Integration ✅ **COMPLETE & DEPLOYED**
-**Objective**: Implement Docker command generation using LLM
-
-#### Step 2.1: LLM Service ✅
-- ✅ Create `src/gateway/core/command_generator.py`
-- ✅ Integrate OpenAI client for command generation (GPT-4o-mini)
-- ✅ Design prompts for Docker command translation
-- ✅ Add prompt engineering for different command types
-
-#### Step 2.2: Container Name Resolution ✅
-- ✅ Implement logical name to actual container name mapping
-- ✅ Add support for container name patterns
-- ✅ Create container discovery utilities
-- ✅ Add validation for container existence
-
-#### Step 2.3: Command Generation Testing ✅
-- ✅ Create unit tests for LLM integration
-- ✅ Test various intent types (restart, logs, execute, etc.)
-- ✅ Validate generated Docker commands
-- ✅ Add error handling for LLM failures
-
-**Status**: ✅ Working LLM that generates valid Docker commands from natural language
-
-### Phase 3: Execution Strategies ✅ **COMPLETE & DEPLOYED**
-**Objective**: Implement local and remote command execution
-
-#### Step 3.1: Local Execution (Docker Socket) ✅
-- ✅ Implement `LocalDockerExecutor` in `src/gateway/core/executors.py`
-- ✅ Add subprocess-based Docker CLI execution
-- ✅ Implement output capture (stdout, stderr, exit_code)
-- ✅ Add timeout and error handling
-
-#### Step 3.2: SSH Execution ✅
-- ✅ Implement `SSHDockerExecutor` for remote execution
-- ✅ Add SSH key management and connection handling
-- ✅ Implement remote command execution with proper escaping
-- ✅ Add SSH connection testing and validation
-
-#### Step 3.3: Execution Strategy Factory ✅
-- ✅ Create executor factory based on configuration
-- ✅ Add strategy validation at startup
-- ✅ Implement consistent execution interface
-- ✅ Add execution logging and monitoring
-
-**Status**: ✅ Working command execution for both local and remote environments
-
-### Phase 4: Complete API Implementation ✅ **COMPLETE & DEPLOYED**
-**Objective**: Implement full request/response cycle
-
-#### Step 4.1: Gateway Service ✅
-- ✅ Create `src/gateway/services/gateway_service.py`
-- ✅ Implement complete workflow: validate → resolve → generate → execute
-- ✅ Add comprehensive error handling and logging
-- ✅ Implement response formatting
-
-#### Step 4.2: API Endpoints ✅
-- ✅ Complete `/execute-docker-command` endpoint implementation
-- ✅ Add request ID tracking and correlation
-- ✅ Implement proper HTTP status codes
-- ✅ Add API documentation with OpenAPI/Swagger
-
-#### Step 4.3: Error Handling & Logging ✅
-- ✅ Add structured logging throughout the service
-- ✅ Implement error classification and reporting
-- ✅ Add request/response logging for debugging
-- ✅ Create error recovery mechanisms
-
-**Status**: ✅ Complete working API that handles full request lifecycle
-
-### Phase 5: Containerization & Integration ✅ **COMPLETE & DEPLOYED**
-**Objective**: Package service and integrate with infrastructure
-
-#### Step 5.1: Docker Setup ✅
-- ✅ Create `infrastructure/docker/Dockerfile.ai-command-gateway` with multi-stage build
-- ✅ Configure volume mounting for Docker socket (local strategy)
-- ✅ Set up SSH key mounting for remote strategy
-- ✅ Add health checks and proper shutdown handling
-
-#### Step 5.2: Infrastructure Integration ✅
-- ✅ Add service to `infrastructure/docker-compose.yml`
-- ✅ Configure networking and port mapping (port 8003)
-- ✅ Integration with ai-agent-network
-- ✅ Container-to-container Docker command execution
-
-#### Step 5.3: Environment Configuration ✅
-- ✅ Create local development `.env` configuration
-- ✅ Document Oracle Cloud SSH configuration
-- ✅ Add configuration validation scripts
-- ✅ Create deployment documentation
-
-**Status**: ✅ Fully containerized service integrated into infrastructure
-
-### API Schema Optimization ✅ **COMPLETE**
-**Objective**: Enhance API efficiency and capabilities
-
-- ✅ Simplified request schema (removed UUID requirement, renamed fields)
-- ✅ Enhanced context field for better AI command generation
-- ✅ Streamlined response format (removed redundant fields)
-- ✅ Auto-generated request IDs in responses
-- ✅ Cleaner error handling and response format
-- ✅ 40% smaller payloads
-
-**Status**: ✅ Production-ready optimized API
-
----
-
-## 🚀 **CURRENT DEPLOYMENT STATUS**
-
-### **Live Service Information**
-```
-🎉 SERVICE STATUS: FULLY OPERATIONAL & CONTAINERIZED
-✅ Container: ai-command-gateway (visible in Docker dashboard)
-✅ Port: 8003 (http://localhost:8003)
-✅ Health Check: http://localhost:8003/health → HEALTHY
-✅ API Docs: http://localhost:8003/docs
-✅ Network: ai-agent-network
-✅ Docker Socket Access: ✅ WORKING (can control other containers)
-```
-
-### **Verified Working Operations**
+#### Restart a Service
 ```bash
-✅ Container Management:
-   - "restart the market predictor" → docker restart market-predictor → SUCCESS
-   - "stop the coding ai agent" → docker stop coding-ai-agent → SUCCESS
-   - "start the coding ai agent" → docker start coding-ai-agent → SUCCESS
-
-✅ Monitoring & Status:
-   - "show resource usage stats" → docker stats --no-stream → SUCCESS
-   - "check service status" → docker ps --filter name=service → SUCCESS
-   - "show recent logs" → docker logs --tail 50 → SUCCESS
-
-✅ Health Checks:
-   - "check if service is healthy" → docker ps --filter health=healthy → SUCCESS
-```
-
-### **Performance Metrics**
-- **Container Startup**: ~5 seconds to healthy status
-- **API Response Time**: Sub-second responses
-- **Docker Command Execution**: 1-2 seconds
-- **AI Processing**: ~1-2 seconds (OpenAI GPT-4o-mini)
-- **Memory Usage**: Minimal container footprint
-
----
-
-## 🎯 **NEXT PHASES**
-
-### Phase 6: Testing & Validation ⏳ **READY TO START**
-**Objective**: Comprehensive testing and production readiness
-
-#### Step 6.1: Unit Testing
-- [ ] Complete unit test coverage for all components
-- [ ] Mock LLM and execution layers for testing
-- [ ] Add configuration testing scenarios
-- [ ] Create test fixtures and utilities
-
-#### Step 6.2: Integration Testing
-- [ ] Test with real devops-ai-agent integration
-- [ ] Validate local Docker socket execution
-- [ ] Test SSH execution with remote containers
-- [ ] Add end-to-end workflow testing
-
-#### Step 6.3: Documentation & Examples
-- [ ] Create comprehensive API documentation
-- [ ] Add configuration examples for different environments
-- [ ] Create troubleshooting guide
-- [ ] Document integration with devops-ai-agent
-
-**Target**: Production-ready service with full testing and documentation
-
----
-
-## Technology Stack
-
-- **Framework**: FastAPI (consistent with other services)
-- **Configuration**: Pydantic BaseSettings v2
-- **LLM Integration**: OpenAI Python client (GPT-4o-mini)
-- **Execution**: subprocess, paramiko (for SSH)
-- **Containerization**: Docker with volume mounting
-- **Testing**: pytest, httpx for API testing
-
-## Success Criteria ✅ **ACHIEVED**
-
-1. ✅ **Functional**: Service successfully translates natural language to Docker commands
-2. ✅ **Integration**: Works seamlessly with Docker infrastructure
-3. ✅ **Multi-Environment**: Supports both local and Oracle Cloud deployments (SSH ready)
-4. ✅ **Reliability**: Handles errors gracefully and provides clear feedback
-5. ✅ **Maintainability**: Clean code architecture with comprehensive logging
-
-## Quick Start
-
-### **Access the Running Service**
-```bash
-# Health Check
-curl http://localhost:8003/health
-
-# API Documentation
-open http://localhost:8003/docs
-
-# Example Request
-curl -X POST http://localhost:8003/execute-docker-command \
+curl -X POST "http://localhost:8003/execute-docker-command" \
   -H "Content-Type: application/json" \
   -d '{
-    "source_id": "test-client",
+    "source_id": "monitoring-system",
+    "target_resource": {"name": "coding-ai-agent"},
+    "action_request": {
+      "intent": "restart the service",
+      "context": "High memory usage detected",
+      "priority": "HIGH"
+    }
+  }'
+```
+
+#### Stop a Service
+```bash
+curl -X POST "http://localhost:8003/execute-docker-command" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "source_id": "deployment-script",
     "target_resource": {"name": "market-predictor"},
     "action_request": {
-      "intent": "show me the current status",
-      "context": "checking service health",
+      "intent": "stop the container",
       "priority": "NORMAL"
     }
   }'
 ```
 
-### **Development Setup**
+#### Start a Service
 ```bash
-cd ai-command-gateway
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-pip install -r requirements.txt
-
-# Set up .env file with your OpenAI API key
-cp .env.example .env
-# Edit .env and add your OPENAI_API_KEY
-
-# Run locally
-PYTHONPATH=src python -m uvicorn gateway.api.main:app --port 8003 --reload
+curl -X POST "http://localhost:8003/execute-docker-command" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "source_id": "deployment-script",
+    "target_resource": {"name": "market-predictor"},
+    "action_request": {
+      "intent": "start the container",
+      "context": "Deployment completed, starting service",
+      "priority": "NORMAL"
+    }
+  }'
 ```
 
-**Status**: ✅ **PRODUCTION READY** - AI Command Gateway is fully operational and containerized! 🚀
+### Monitoring & Status
 
-**Next**: Ready for DevOps AI Agent integration testing and advanced features.
+#### Check Container Status
+```bash
+curl -X POST "http://localhost:8003/execute-docker-command" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "source_id": "health-checker",
+    "target_resource": {"name": "devops-ai-agent"},
+    "action_request": {
+      "intent": "check container status",
+      "context": "Regular health check",
+      "priority": "LOW"
+    }
+  }'
+```
+
+#### Get Resource Usage
+```bash
+curl -X POST "http://localhost:8003/execute-docker-command" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "source_id": "monitoring",
+    "target_resource": {"name": "coding-ai-agent"},
+    "action_request": {
+      "intent": "show memory and CPU usage",
+      "context": "Performance monitoring check",
+      "priority": "NORMAL"
+    }
+  }'
+```
+
+#### View Container Logs
+```bash
+curl -X POST "http://localhost:8003/execute-docker-command" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "source_id": "debugging",
+    "target_resource": {"name": "market-predictor"},
+    "action_request": {
+      "intent": "show recent logs",
+      "context": "Investigating error reports",
+      "priority": "HIGH"
+    }
+  }'
+```
+
+### Advanced Operations
+
+#### Container Health Check
+```bash
+curl -X POST "http://localhost:8003/execute-docker-command" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "source_id": "health-monitor",
+    "target_resource": {"name": "coding-ai-agent"},
+    "action_request": {
+      "intent": "check if service is healthy",
+      "context": "Automated health monitoring",
+      "priority": "NORMAL"
+    }
+  }'
+```
+
+#### Inspect Container Configuration
+```bash
+curl -X POST "http://localhost:8003/execute-docker-command" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "source_id": "admin-tools",
+    "target_resource": {"name": "devops-ai-agent"},
+    "action_request": {
+      "intent": "show container configuration",
+      "context": "Configuration audit",
+      "priority": "LOW"
+    }
+  }'
+```
+
+---
+
+## 🎯 Supported Operations
+
+The AI Command Gateway can intelligently translate various intents into appropriate Docker commands:
+
+| Intent Category | Example Intents | Generated Commands |
+|----------------|-----------------|-------------------|
+| **Lifecycle** | "restart the service", "stop container", "start service" | `docker restart`, `docker stop`, `docker start` |
+| **Status** | "check status", "is it running", "show container info" | `docker ps`, `docker inspect` |
+| **Monitoring** | "show resource usage", "get memory stats", "CPU usage" | `docker stats`, `docker top` |
+| **Logs** | "show recent logs", "tail logs", "check errors" | `docker logs` |
+| **Health** | "check health", "is service healthy", "health status" | `docker ps --filter health=healthy` |
+
+### Supported Services
+
+Currently configured services:
+- `market-predictor`
+- `devops-ai-agent` 
+- `coding-ai-agent`
+
+*Additional services can be configured via environment variables*
+
+---
+
+## ⚙️ Configuration
+
+### Environment Variables
+
+| Variable | Description | Default | Required |
+|----------|-------------|---------|----------|
+| `OPENAI_API_KEY` | OpenAI API key for AI processing | - | ✅ |
+| `OPENAI_MODEL` | OpenAI model to use | `gpt-3.5-turbo` | ❌ |
+| `EXECUTION_STRATEGY` | Execution method | `local_socket` | ❌ |
+| `API_HOST` | API server host | `0.0.0.0` | ❌ |
+| `API_PORT` | API server port | `8003` | ❌ |
+| `LOG_LEVEL` | Logging level | `INFO` | ❌ |
+| `COMMAND_TIMEOUT_SECONDS` | Command execution timeout | `30` | ❌ |
+
+### Container Name Mapping
+
+Map logical service names to actual container names:
+
+```env
+CONTAINER_NAME_FOR_MARKET_PREDICTOR="market-predictor"
+CONTAINER_NAME_FOR_DEVOPS_AI_AGENT="devops-ai-agent"
+CONTAINER_NAME_FOR_CODING_AI_AGENT="coding-ai-agent"
+```
+
+### SSH Remote Execution (Optional)
+
+For remote Docker host execution:
+
+```env
+EXECUTION_STRATEGY="ssh"
+SSH_TARGET_HOST="your-docker-host"
+SSH_TARGET_USER="docker-user"
+SSH_PRIVATE_KEY_PATH="/path/to/ssh/key"
+```
+
+---
+
+## 🔍 Error Handling
+
+### Common Error Responses
+
+#### Service Not Found
+```json
+{
+  "overall_status": "VALIDATION_ERROR",
+  "error_details": {
+    "error_code": "UNKNOWN_SERVICE",
+    "error_message": "Unknown logical service name: invalid-service"
+  }
+}
+```
+
+#### Command Generation Failed
+```json
+{
+  "overall_status": "LLM_GENERATION_FAILED",
+  "error_details": {
+    "error_code": "LLM_ERROR",
+    "error_message": "Generated command failed validation"
+  }
+}
+```
+
+#### Execution Failed
+```json
+{
+  "overall_status": "COMPLETED_FAILURE",
+  "execution_details": {
+    "command": "docker restart non-existent-container",
+    "execution_result": {
+      "status": "FAILURE",
+      "exit_code": 1,
+      "stderr": "Error: No such container: non-existent-container"
+    }
+  }
+}
+```
+
+---
+
+## 📊 Monitoring
+
+### Health Check
+```bash
+curl http://localhost:8003/health
+```
+
+### Prometheus Metrics
+```bash
+curl http://localhost:8003/metrics
+```
+
+**Available Metrics:**
+- `gateway_requests_total` - Total requests by source and status
+- `gateway_request_duration_seconds` - Request duration histograms
+- `gateway_command_generation_total` - Command generation success/failure
+- `gateway_command_execution_total` - Docker command execution stats
+- `gateway_active_requests` - Currently active requests
+
+---
+
+## 🏗️ Architecture
+
+```
+┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
+│   Client App    │───▶│ AI Command      │───▶│ Docker Engine   │
+│   (DevOps Agent)│    │ Gateway         │    │ (Containers)    │
+└─────────────────┘    └─────────────────┘    └─────────────────┘
+                              │
+                              ▼
+                       ┌─────────────────┐
+                       │ OpenAI GPT-3.5  │
+                       │ (Command Gen)   │
+                       └─────────────────┘
+```
+
+### Components
+
+- **API Layer**: FastAPI REST endpoint with request validation
+- **AI Engine**: OpenAI GPT-3.5-turbo for natural language processing
+- **Execution Layer**: Local Docker socket or SSH remote execution
+- **Configuration**: Environment-based configuration management
+- **Monitoring**: Prometheus metrics and health checks
+
+---
+
+## 🔗 Integration Examples
+
+### DevOps AI Agent Integration
+
+```python
+import httpx
+
+class AICommandGatewayClient:
+    def __init__(self, base_url="http://localhost:8003"):
+        self.base_url = base_url
+    
+    async def execute_docker_command(self, service_name: str, intent: str, context: str = None):
+        async with httpx.AsyncClient() as client:
+            response = await client.post(
+                f"{self.base_url}/execute-docker-command",
+                json={
+                    "source_id": "devops-ai-agent",
+                    "target_resource": {"name": service_name},
+                    "action_request": {
+                        "intent": intent,
+                        "context": context,
+                        "priority": "NORMAL"
+                    }
+                }
+            )
+            return response.json()
+
+# Usage
+gateway = AICommandGatewayClient()
+result = await gateway.execute_docker_command(
+    "market-predictor", 
+    "restart the service",
+    "High CPU usage detected"
+)
+```
+
+### Monitoring System Integration
+
+```bash
+# Monitoring script example
+check_service_health() {
+    local service=$1
+    response=$(curl -s -X POST "http://localhost:8003/execute-docker-command" \
+      -H "Content-Type: application/json" \
+      -d "{
+        \"source_id\": \"monitoring-system\",
+        \"target_resource\": {\"name\": \"$service\"},
+        \"action_request\": {
+          \"intent\": \"check if service is healthy\",
+          \"context\": \"Automated health check\",
+          \"priority\": \"NORMAL\"
+        }
+      }")
+    
+    echo "$response" | jq '.execution_details.execution_result.stdout'
+}
+
+check_service_health "market-predictor"
+```
+
+---
+
+## 🚀 Getting Started
+
+1. **Verify Service**: Ensure the AI Command Gateway is running
+   ```bash
+   curl http://localhost:8003/health
+   ```
+
+2. **Test Basic Operation**: Try a simple command
+   ```bash
+   curl -X POST "http://localhost:8003/execute-docker-command" \
+     -H "Content-Type: application/json" \
+     -d '{
+       "source_id": "test",
+       "target_resource": {"name": "market-predictor"},
+       "action_request": {"intent": "check status"}
+     }'
+   ```
+
+3. **Explore API**: Visit the interactive documentation
+   ```bash
+   open http://localhost:8003/docs
+   ```
+
+4. **Monitor Metrics**: Check Prometheus metrics
+   ```bash
+   curl http://localhost:8003/metrics
+   ```
+
+---
+
+## 📚 Additional Resources
+
+- **API Documentation**: [http://localhost:8003/docs](http://localhost:8003/docs)
+- **Health Status**: [http://localhost:8003/health](http://localhost:8003/health)
+- **Metrics**: [http://localhost:8003/metrics](http://localhost:8003/metrics)
+- **Service Logs**: `docker logs ai-command-gateway`
+
+---
+
+**AI Command Gateway** - Making Docker operations intelligent and accessible through natural language. Transform your infrastructure management with AI-powered automation.
